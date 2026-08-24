@@ -195,13 +195,31 @@ DATA.forEach((phase, pi) => {
   phasesEl.appendChild(section);
 });
 
+// In-memory state always works, even in sandboxed previews.
+// If a real localStorage is available (e.g. hosted on GitHub Pages),
+// it's used underneath so progress survives a page reload.
+let memoryState = {};
+let storageOK = false;
+try{
+  const testKey = '__st_test__';
+  window.localStorage.setItem(testKey, '1');
+  window.localStorage.removeItem(testKey);
+  storageOK = true;
+}catch(e){ storageOK = false; }
+
 function loadState(){
-  try{ return JSON.parse(localStorage.getItem('startracker-progress') || '{}'); }
-  catch(e){ return {}; }
+  if(storageOK){
+    try{ return JSON.parse(window.localStorage.getItem('startracker-progress') || '{}'); }
+    catch(e){ /* fall through to memory */ }
+  }
+  return memoryState;
 }
 function saveState(state){
-  try{ localStorage.setItem('startracker-progress', JSON.stringify(state)); }
-  catch(e){}
+  memoryState = state;
+  if(storageOK){
+    try{ window.localStorage.setItem('startracker-progress', JSON.stringify(state)); }
+    catch(e){ /* ignore, memory copy still holds */ }
+  }
 }
 
 function updateClock(state){
